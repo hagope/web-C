@@ -2,7 +2,7 @@
  * This C program demonstrates:
  * ✓ 1. fetch data from a web API using cURL;
  * ✓ 2. parse the JSON response using json-c;
- * □ 3. traverse the JSON and print certain keys;
+ * ✓ 3. traverse the JSON and print certain keys;
  * □ 4. store the result in a SQLite database; and
  * ✓ 5. basic error checking.
 */
@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 
+        puts("*** PERFORM CURL  ***");
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK) {
@@ -89,7 +90,6 @@ int main(int argc, char *argv[]) {
                 json_tokener *tok;
                 tok = json_tokener_new();
                 json_data_obj = json_tokener_parse(s.ptr);
-                json_object *json_data_obj = NULL;
                 int stringlen = 0;
                 enum json_tokener_error jerr;
                 do {
@@ -106,23 +106,31 @@ int main(int argc, char *argv[]) {
                         // Handle extra characters after parsed object as desired.
                         // e.g. issue an error, parse another object from that point, etc...
                 }
-                // Success, use json_data_obj here.
 
                 //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
-                json_object_object_foreach(json_data_obj, key, val) {
-                    printf("KEY:%s\t VAL:%s\n", key, json_object_to_json_string(val));
-                    /* TODO: Traverse the JSON
-                     * "results" => "channel" => "item" => "condition" => "temp"
-                     * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
-                     */
-                }
+                int objLen=0;
+                int json_level=0;
+                do {
+                        //printf("%d - *****************\n", json_level);
+                        /*Traverse the JSON
+                        * "results" => "channel" => "item" => "condition" => "temp"
+                        * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
+                        */
+                        json_object_object_foreach(json_data_obj, key, val) {
+                                if(strcmp(key,"code") == 0 || strcmp(key,"temp") == 0 || strcmp(key,"text") == 0)
+                                        printf("%s\t : %s\n", key, json_object_to_json_string(val));
+                                json_data_obj = val;
+                        }
+                        objLen =  json_object_object_length(json_data_obj);
+                        //printf("object length: %d\n", objLen);
+                        json_level++;
+                } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
 
                 json_object_put(json_data_obj);
 
                 free(s.ptr);
                 puts("*** END CURL RESPONSE ***");
         }
-
         curl_easy_cleanup(curl);
     }
     
