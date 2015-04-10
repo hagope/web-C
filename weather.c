@@ -15,6 +15,7 @@
 #include "json_tokener.h"
 
 /* Yahoo Weather API: https://developer.yahoo.com/weather/ */
+/* TODO: De-hard-code the location */
 const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/"
                                     "yql?q=select%20item.condition%20from%20"
                                     "weather.forecast%20where%20woeid%20in%20"
@@ -58,6 +59,12 @@ int main(int argc, char *argv[]) {
 
     curl = curl_easy_init();
 
+    /* Get the response from the REST API
+     * and store in the string struct;
+     * this code is adapted from:
+     * http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string
+     */
+
     if(curl)
     {
         struct string s;
@@ -65,13 +72,6 @@ int main(int argc, char *argv[]) {
         json_object *json_data_obj;
 
         curl_easy_setopt(curl, CURLOPT_URL, api_endpoint);
-        
-        /* Get the response from the REST API 
-         * and store in the string struct;
-         * this code is adapted from:
-         * http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string
-         */
-
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 
@@ -82,25 +82,39 @@ int main(int argc, char *argv[]) {
                     curl_easy_strerror(res));
         } else {
                 puts("*** BEGIN CURL RESPONSE ***");
-                //printf("%s\n", s.ptr);
-                json_data_obj = json_tokener_parse(s.ptr);
-                //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
-
                 /* For proper error handling of JSON object:
                  * https://json-c.github.io/json-c/json-c-0.12/doc/html/json__tokener_8h.html#a0d9a666c21879647e8831f9cfa691673
                  */
 
-                if(json_data_obj == NULL) {
-                        /* Use json_tokener_get_error() for more error codes */
-                        puts("error: BAD JSON"); 
-                    } else {
-                    json_object_object_foreach(json_data_obj, key, val) {
-                        printf("KEY:%s\t VAL:%s\n", key, json_object_to_json_string(val));
-                        /* TODO: Traverse the JSON
-                         * "results" => "channel" => "item" => "condition" => "temp"
-                         * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
-                         */
-                    }
+                json_tokener *tok;
+                tok = json_tokener_new();
+                json_data_obj = json_tokener_parse(s.ptr);
+                json_object *json_data_obj = NULL;
+                int stringlen = 0;
+                enum json_tokener_error jerr;
+                do {
+                        stringlen = strlen(s.ptr);
+                        json_data_obj = json_tokener_parse_ex(tok, s.ptr, stringlen);
+                } while ((jerr = json_tokener_get_error(tok)) == json_tokener_continue);
+                if (jerr != json_tokener_success)
+                {
+                        fprintf(stderr, "Error: %s\n", json_tokener_error_desc(jerr));
+                        // Handle errors, as appropriate for your application.
+                }
+                if (tok->char_offset < stringlen) // XXX shouldn't access internal fields
+                {
+                        // Handle extra characters after parsed object as desired.
+                        // e.g. issue an error, parse another object from that point, etc...
+                }
+                // Success, use json_data_obj here.
+
+                //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
+                json_object_object_foreach(json_data_obj, key, val) {
+                    printf("KEY:%s\t VAL:%s\n", key, json_object_to_json_string(val));
+                    /* TODO: Traverse the JSON
+                     * "results" => "channel" => "item" => "condition" => "temp"
+                     * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
+                     */
                 }
 
                 json_object_put(json_data_obj);
