@@ -17,41 +17,49 @@
 
 /* Yahoo Weather API: https://developer.yahoo.com/weather/ */
 /* TODO: De-hard-code the location */
-const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/"
-                                    "yql?q=select%20item.condition%20from%20"
-                                    "weather.forecast%20where%20woeid%20in%20"
-                                    "(select%20woeid%20from%20geo.places(1)%20"
-                                    "where%20text%3D%22sunnyvale%2C%20ca%22)&format="
-                                    "json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+/* this string can be modified for your location:
+ * const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/"
+ *                                   "yql?q=select%20item.condition%20from%20"
+ *                                   "weather.forecast%20where%20woeid%20in%20"
+ *                                   "(select%20woeid%20from%20geo.places(1)%20"
+ *                                   "where%20text%3D%22sunnyvale%2C%20ca%22)&format="
+ *                                   "json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+*/
+
+const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/yql?q="
+                                    "select%20item.condition%20from%20"
+                                    "weather.forecast%20where%20woeid%20%3D%"
+                                    "202502265&format=json&env=store%3A%2F%2F"
+                                    "datatables.org%2Falltableswithkeys";
                                     
 struct string {
-  char *ptr;
-  size_t len;
+    char *ptr;
+    size_t len;
 };
 
 void init_string(struct string *s) {
-  s->len = 0;
-  s->ptr = malloc(s->len+1);
-  if (s->ptr == NULL) {
-    fprintf(stderr, "in init_string(), malloc() failed\n");
-    exit(EXIT_FAILURE);
-  }
-  s->ptr[0] = '\0';
+    s->len = 0;
+    s->ptr = malloc(s->len+1);
+    if (s->ptr == NULL) {
+      fprintf(stderr, "in init_string(), malloc() failed\n");
+      exit(EXIT_FAILURE);
+    }
+    s->ptr[0] = '\0';
 }
 
 size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
 {
-  size_t new_len = s->len + size*nmemb;
-  s->ptr = realloc(s->ptr, new_len+1);
-  if (s->ptr == NULL) {
+    size_t new_len = s->len + size*nmemb;
+    s->ptr = realloc(s->ptr, new_len+1);
+    if (s->ptr == NULL) {
       fprintf(stderr, "realloc() failed\n");
       exit(EXIT_FAILURE);
-  }
-  memcpy(s->ptr+s->len, ptr, size*nmemb);
-  s->ptr[new_len] = '\0';
-  s->len = new_len;
+    }
+    memcpy(s->ptr+s->len, ptr, size*nmemb);
+    s->ptr[new_len] = '\0';
+    s->len = new_len;
 
-  return size*nmemb;
+    return size*nmemb;
 }
 
 /* This function will traverse the JSON
@@ -96,12 +104,12 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
         * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
         */
         json_object_object_foreach(json_data_obj, key, val) {
-                if(strcmp(key, in_key) == 0) {
-                    const char *ret = json_object_to_json_string(val);
-                    return ret;
-                }
-                //printf("%s\t : %s\n", key, json_object_to_json_string(val));
-                json_data_obj = val;
+            if(strcmp(key, in_key) == 0) {
+                const char *ret = json_object_to_json_string(val);
+                return ret;
+            }
+            //printf("%s\t : %s\n", key, json_object_to_json_string(val));
+            json_data_obj = val;
         }
         objLen =  json_object_object_length(json_data_obj);
         //printf("object length: %d\n", objLen);
