@@ -14,4 +14,6 @@ void init_string(struct string *s);
 
 size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s);
 
+char *sanitize_tweet(char *src);
+
 const char *json_get_first_value_from_key(char *json_str, char *in_key);

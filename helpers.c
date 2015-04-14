@@ -77,6 +77,27 @@ char *str_replace(char *orig, char *rep, char *with) {
     return result;
 }
 
+/* Strip tweets of URLs, newlines
+ * convert HTML codes
+ */
+char *sanitize_tweet(char *src)
+{
+    src++; src[strlen(src)-1]=0;
+    char *dst0 = malloc(sizeof(char) * strlen(src) + 1);
+    strcpy(dst0, str_replace(src, replace_http, replace_with));
+    char *dst1 = malloc(sizeof(char) * strlen(dst0) + 1);
+    strcpy(dst1, str_replace(dst0,"\\n" , " "));
+    char *dst2 = malloc(sizeof(char) * strlen(dst1) + 1);
+    strcpy(dst2, str_replace(dst1, replace_https, replace_with));
+    char *dst3 = malloc(sizeof(char) * strlen(dst2) + 1);
+    decode_html_entities_utf8(dst3, dst2);
+    free(dst0);
+    free(dst1);
+    free(dst2);
+    return dst3;
+}
+
+
 
 /* This function will traverse the JSON
  * and return the first value that
@@ -89,7 +110,7 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
     json_tokener *tok;
     json_object *json_data_obj;
     tok = json_tokener_new();
-    json_data_obj = json_tokener_parse(json_str);
+    //json_data_obj = json_tokener_parse(json_str);
     int stringlen = 0;
     enum json_tokener_error jerr;
 
@@ -111,50 +132,20 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
     // printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
     int objLen=0;
 
-    int json_array_len = json_object_array_length(json_data_obj);
-    printf("array_len: %d\n", json_array_len);
-    int array_iter;
-    //char *ret;
-    FILE *f ;
-    f = fopen("tweets.txt","w");
-    for(array_iter=0; array_iter<json_array_len; array_iter++)
-        {
-        json_object *temp_json_obj;
-        temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
-        //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
-        do {
-            /* Traverse the JSON */
-            json_object_object_foreach(temp_json_obj, key, val) {
-                if(strcmp(key, in_key) == 0) {
-                    char *src = json_object_to_json_string_ext(val,JSON_C_TO_STRING_PRETTY );
-                    src++; src[strlen(src)-1]=0;
-                    printf("%s\n", src);
-                    char *dst0 = malloc(sizeof(char) * strlen(src) + 1);
-                    strcpy(dst0, str_replace(src, replace_http, replace_with));
-                    char *dst1 = malloc(sizeof(char) * strlen(dst0) + 1);
-                    strcpy(dst1, str_replace(dst0,"\\n" , " "));
-                    char *dst2 = malloc(sizeof(char) * strlen(dst1) + 1);
-                    strcpy(dst2, str_replace(dst1, replace_https, replace_with));
-                    char *dst3 = malloc(sizeof(char) * strlen(dst2) + 1);
-                    decode_html_entities_utf8(dst3, dst2);
-                    printf("%s\n", dst3);
-                    fprintf(f,"%s\n", dst3);
-                    puts("---------------");
-                    free(dst0);
-                    free(dst1);
-                    free(dst2);
-                    free(dst3);
-               }
-                //printf("%s\t : %s\n", key, json_object_to_json_string(val));
-            } 
-            temp_json_obj = val;
-            objLen =  json_object_object_length(temp_json_obj);
-            //printf("object length: %d\n", objLen);
-        } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
-        json_object_put(temp_json_obj);
-    }
-    fclose(f);
+    const char *ret;
+    do {
+        /* Traverse the JSON */
+        json_object_object_foreach(json_data_obj, key, val) {
+            if(strcmp(key, in_key) == 0) {
+                ret = json_object_to_json_string_ext(val,JSON_C_TO_STRING_PRETTY );
+           }
+            //printf("%s\t : %s\n", key, json_object_to_json_string(val));
+        } 
+        json_data_obj = val;
+        objLen =  json_object_object_length(val);
+        //printf("object length: %d\n", objLen);
+    } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
 
     json_object_put(json_data_obj);
-    return retNull;
+    return ret;
 }
