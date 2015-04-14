@@ -55,7 +55,7 @@ void read_auth_keys(const char *filename, int bufsize,
 }
 
 
-int oauth_consumer_example(int use_post) {
+int oauth_twitter(int use_post) {
     const char *twitter_api_endpoint = "https://api.twitter.com/1.1/statuses/home_timeline.json?count=10&include_entities=false&exclude_replies=true&trim_user=true&contributor_details=false";
 
     /* Use this endpoint and POST to update status */
@@ -105,15 +105,38 @@ int oauth_consumer_example(int use_post) {
     }
 
     printf("query:'%s'\n",req_url);
-    //printf("reply:'%s'\n\n",reply);
-    json_get_first_value_from_key(reply, "text");
-    //printf("%s\n", tweet);
+
+    json_object *json_data_obj;
+    json_data_obj = json_tokener_parse(reply);
+
+    /* reply from Twitter API a JSON array 
+     * TODO: validate the reply before parsing
+     */
+
+    int json_array_len = json_object_array_length(json_data_obj);
+    int array_iter;
+
+    FILE *f = fopen("tweets.txt","w");
     
+    for(array_iter=0; array_iter<json_array_len; array_iter++)
+    {
+        json_object *temp_json_obj;
+        temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
+        //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
+        char *src;
+        src = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "text");
+        fprintf(f,"%s\n", sanitize_tweet(src));
+        json_object_put(temp_json_obj);
+    }
+
+    json_object_put(json_data_obj);
+
     if(req_url) free(req_url);
     if(postarg) free(postarg);
 
     if(reply) free(reply);
 
+    if(fclose(f)==0) puts("tweets store in tweets.txt");
     return(0);
 }
 
@@ -125,6 +148,6 @@ int oauth_consumer_example(int use_post) {
  */
 
 int main (int argc, char **argv) {
-  oauth_consumer_example(0);
+  oauth_twitter(0);
   return(0);
 }

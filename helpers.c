@@ -105,8 +105,6 @@ char *sanitize_tweet(char *src)
  * otherwise returns NULL
 */
 const char *json_get_first_value_from_key(char *json_str, char *in_key) {
-    const char *retNull = NULL;
-
     json_tokener *tok;
     json_object *json_data_obj;
     tok = json_tokener_new();
