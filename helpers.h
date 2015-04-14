@@ -3,6 +3,7 @@
 #include <string.h>
 #include "json.h"
 #include "json_tokener.h"
+#include "entities.h"
 
 struct string {
     char *ptr;

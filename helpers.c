@@ -1,5 +1,10 @@
 #include "helpers.h"
+#include <stdio.h>
 
+char *replace_http = "http:\\/\\/t.co\\/";
+char *replace_https = "https:\\/\\/t.co\\/";
+
+char *replace_with = ">";
 void init_string(struct string *s) {
     s->len = 0;
     s->ptr = malloc(s->len+1);
@@ -23,6 +28,53 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
     s->len = new_len;
 
     return size*nmemb;
+}
+
+
+/* http://stackoverflow.com/questions/779875/what-is-the-function-to-replace-string-in-c */
+// You must free the result if result is non-NULL.
+char *str_replace(char *orig, char *rep, char *with) {
+    char *result; // the return string
+    char *ins;    // the next insert point
+    char *tmp;    // varies
+    int len_rep;  // length of rep
+    int len_with; // length of with
+    int len_front; // distance between rep and end of last rep
+    int count;    // number of replacements
+
+    if (!orig)
+        return NULL;
+    if (!rep)
+        rep = "";
+    len_rep = strlen(rep);
+    if (!with)
+        with = "";
+    len_with = strlen(with);
+
+    ins = orig;
+    for(count = 0; (tmp = strstr(ins, rep)); ++count) {
+        ins = tmp + len_rep;
+    }
+
+    // first time through the loop, all the variable are set correctly
+    // from here on,
+    //    tmp points to the end of the result string
+    //    ins points to the next occurrence of rep in orig
+    //    orig points to the remainder of orig after "end of rep"
+    tmp = result = malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+
+    if (!result)
+        return NULL;
+
+    while (count--) {
+        ins = strstr(orig, rep);
+        len_front = ins - orig;
+        tmp = strncpy(tmp, orig, len_front) + len_front;
+        tmp = strcpy(tmp, with) + len_with;
+        orig += len_front + len_rep; // move to next "end of rep"
+    }
+    strcpy(tmp, orig);
+    return result;
 }
 
 
@@ -56,30 +108,53 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
         // e.g. issue an error, parse another object from that point, etc...
     }
 
-    //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
+    // printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
     int objLen=0;
-    int json_level=0;
 
-    do {
-        //printf("%d - *****************\n", json_level);
-        /*Traverse the JSON
-        * "results" => "channel" => "item" => "condition" => "temp"
-        * http://stackoverflow.com/questions/29555192/parsing-deeply-nested-json-key-using-json-c
-        */
-        json_object_object_foreach(json_data_obj, key, val) {
-            if(strcmp(key, in_key) == 0) {
-                const char *ret = json_object_to_json_string(val);
-                return ret;
-            }
-            //printf("%s\t : %s\n", key, json_object_to_json_string(val));
-            json_data_obj = val;
-        }
-        objLen =  json_object_object_length(json_data_obj);
-        //printf("object length: %d\n", objLen);
-        json_level++;
-    } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
+    int json_array_len = json_object_array_length(json_data_obj);
+    printf("array_len: %d\n", json_array_len);
+    int array_iter;
+    //char *ret;
+    FILE *f ;
+    f = fopen("tweets.txt","w");
+    for(array_iter=0; array_iter<json_array_len; array_iter++)
+        {
+        json_object *temp_json_obj;
+        temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
+        //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
+        do {
+            /* Traverse the JSON */
+            json_object_object_foreach(temp_json_obj, key, val) {
+                if(strcmp(key, in_key) == 0) {
+                    char *src = json_object_to_json_string_ext(val,JSON_C_TO_STRING_PRETTY );
+                    src++; src[strlen(src)-1]=0;
+                    printf("%s\n", src);
+                    char *dst0 = malloc(sizeof(char) * strlen(src) + 1);
+                    strcpy(dst0, str_replace(src, replace_http, replace_with));
+                    char *dst1 = malloc(sizeof(char) * strlen(dst0) + 1);
+                    strcpy(dst1, str_replace(dst0,"\\n" , " "));
+                    char *dst2 = malloc(sizeof(char) * strlen(dst1) + 1);
+                    strcpy(dst2, str_replace(dst1, replace_https, replace_with));
+                    char *dst3 = malloc(sizeof(char) * strlen(dst2) + 1);
+                    decode_html_entities_utf8(dst3, dst2);
+                    printf("%s\n", dst3);
+                    fprintf(f,"%s\n", dst3);
+                    puts("---------------");
+                    free(dst0);
+                    free(dst1);
+                    free(dst2);
+                    free(dst3);
+               }
+                //printf("%s\t : %s\n", key, json_object_to_json_string(val));
+            } 
+            temp_json_obj = val;
+            objLen =  json_object_object_length(temp_json_obj);
+            //printf("object length: %d\n", objLen);
+        } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
+        json_object_put(temp_json_obj);
+    }
+    fclose(f);
 
     json_object_put(json_data_obj);
     return retNull;
 }
-
