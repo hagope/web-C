@@ -18,6 +18,7 @@
 #include <oauth.h>
 #include "helpers.h"
 
+int putenv(char *string);
 
 /* Attribution:
  * https://github.com/sigabrt/slurp/blob/8de8fc24d82279e755ce2179dceee5f4ca6df8c0/slurp.c#L277
@@ -105,6 +106,7 @@ int oauth_twitter(int use_post) {
     }
 
     printf("query:'%s'\n",req_url);
+    //printf("query:'%s'\n",reply);
 
     json_object *json_data_obj;
     json_data_obj = json_tokener_parse(reply);
@@ -148,6 +150,9 @@ int oauth_twitter(int use_post) {
  */
 
 int main (int argc, char **argv) {
-  oauth_twitter(0);
-  return(0);
+    /* TODO: Fix this: */
+    /* curl_easy_setopt(curl, CURLOPT_CAPATH, capath); */
+    putenv("CURLOPT_SSL_VERIFYPEER=0"); 
+    oauth_twitter(0);
+    return(0);
 }
