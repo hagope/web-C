@@ -4,8 +4,7 @@
  * ✓ 2. cURL Twitter API endpoint for timeline;
  * ✓ 3. parse the JSON repsonse;
  * ✓ 4. sanitize tweets (strip url and escapes);
- * □ 5. store tweets in a SQLite database; and
- * ✓ 5a. store tweets in a text file;
+ * ✓ 5. store tweets in a text file;
  * □ 6. basic error checking;
  * □ 7. include favorite, retweet, endpoints;
  * □ 8. implement cURL calls rather than calling
@@ -19,6 +18,12 @@
 #include "helpers.h"
 
 int putenv(char *string);
+
+#ifdef DEBUG
+    #define DEBUG_PRINT
+#else
+    #define DEBUG_PRINT for(;0;)
+#endif
 
 /* Attribution:
  * https://github.com/sigabrt/slurp/blob/8de8fc24d82279e755ce2179dceee5f4ca6df8c0/slurp.c#L277
@@ -55,13 +60,19 @@ void read_auth_keys(const char *filename, int bufsize,
     fclose(file);
 }
 
-
-int oauth_twitter(int use_post) {
-    const char *twitter_api_endpoint = "https://api.twitter.com/1.1/statuses/home_timeline.json?count=10&include_entities=false&exclude_replies=true&trim_user=true&contributor_details=false";
+/* If out_file is NULL, will print to stdout */
+int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
+    const char *twitter_api_endpoint =  "https://api.twitter.com/1.1/"
+                                        "statuses/home_timeline.json"
+                                        "?count=10&include_entities=false"
+                                        "&exclude_replies=true"
+                                        "&trim_user=true"
+                                        "&contributor_details=false";
 
     /* Use this endpoint and POST to update status */
-    //const char *twitter_api_endpoint = "https://api.twitter.com/1.1/statuses/update.json?status=Aint%20twitter%20great";
-
+    /* const char *twitter_api_endpoint =   "https://api.twitter.com/1.1/" */
+                                            /* "statuses/update.json" */
+                                            /* "?status=Aint%20twitter%20great"; */
 
     /* Attribution (next 22 lines):
      *  https://github.com/sigabrt/slurp/blob/8de8fc24d82279e755ce2179dceee5f4ca6df8c0/slurp.c#L41
@@ -71,14 +82,13 @@ int oauth_twitter(int use_post) {
     // These may be found on your twitter dev page, under "Applications"
     // You will need to create a new app if you haven't already
     // The four keys should be on separate lines in this order:
-    char *keyfile = "keys.txt";
     char *ckey, *csecret, *atok, *atoksecret;
     int bufsize = 64;
     ckey = (char *)malloc(bufsize * sizeof(char));
     csecret = (char *)malloc(bufsize * sizeof(char));
     atok = (char *)malloc(bufsize * sizeof(char));
     atoksecret = (char *)malloc(bufsize * sizeof(char));
-    read_auth_keys(keyfile, bufsize, ckey, csecret, atok, atoksecret);
+    read_auth_keys(key_file, bufsize, ckey, csecret, atok, atoksecret);
     if(ckey == NULL || csecret == NULL ||
             atok == NULL || atoksecret == NULL)
     {
@@ -100,13 +110,13 @@ int oauth_twitter(int use_post) {
         //reply = oauth_curl_post(req_url,postarg, NULL);
     } else {
         req_url = oauth_sign_url2(twitter_api_endpoint, NULL, OA_HMAC, NULL, ckey, csecret, atok, atoksecret);
-        printf("req_url: %s\n", req_url);
+        DEBUG_PRINT printf("req_url: %s\n", req_url);
         reply = oauth_http_get(req_url,NULL);
         //reply = oauth_curl_get(req_url, NULL, NULL), reply;
     }
 
-    printf("query:'%s'\n",req_url);
-    //printf("query:'%s'\n",reply);
+    DEBUG_PRINT printf("query:'%s'\n",req_url);
+    DEBUG_PRINT printf("query:'%s'\n",reply);
 
     json_object *json_data_obj;
     json_data_obj = json_tokener_parse(reply);
@@ -118,16 +128,22 @@ int oauth_twitter(int use_post) {
     int json_array_len = json_object_array_length(json_data_obj);
     int array_iter;
 
-    FILE *f = fopen("tweets.txt","w");
+    FILE *f;
+    if(out_file != NULL)
+        f = fopen(out_file,"w");
     
     for(array_iter=0; array_iter<json_array_len; array_iter++)
     {
         json_object *temp_json_obj;
         temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
-        //printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
+        DEBUG_PRINT printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
         char *src;
         src = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "text");
-        fprintf(f,"%s\n", sanitize_tweet(src));
+        if(out_file != NULL) {
+            fprintf(f,"%s\n", sanitize_tweet(src));
+        } else {
+            printf("%s\n", sanitize_tweet(src));
+        }
         json_object_put(temp_json_obj);
     }
 
@@ -135,16 +151,16 @@ int oauth_twitter(int use_post) {
 
     if(req_url) free(req_url);
     if(postarg) free(postarg);
-
     if(reply) free(reply);
 
-    if(fclose(f)==0) puts("tweets store in tweets.txt");
+    if(out_file != NULL)
+        if(fclose(f)==0) 
+            printf("tweets stored in %s\n", out_file);
+
     return(0);
 }
 
-/**
- * Main Test and Example Code.
- * 
+/*
  * compile:
  * gcc -lssl -loauth -o twitter twitter.c
  */
@@ -153,6 +169,7 @@ int main (int argc, char **argv) {
     /* TODO: Fix this: */
     /* curl_easy_setopt(curl, CURLOPT_CAPATH, capath); */
     putenv("CURLOPT_SSL_VERIFYPEER=0"); 
-    oauth_twitter(0);
+    oauth_get_tweets(0, "keys.txt", "tweets.txt");
+    //oauth_get_tweets(0, "keys.txt", NULL); //prints to stdout
     return(0);
 }
