@@ -136,6 +136,7 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
         json_object_object_foreach(json_data_obj, key, val) {
             if(strcmp(key, in_key) == 0) {
                 ret = json_object_to_json_string_ext(val,JSON_C_TO_STRING_PRETTY );
+                return ret;
            }
             //printf("%s\t : %s\n", key, json_object_to_json_string(val));
         } 
