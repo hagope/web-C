@@ -5,9 +5,12 @@
  * ✓ 3. parse the JSON repsonse;
  * ✓ 4. sanitize tweets (strip url and escapes);
  * ✓ 5. store tweets in a text file;
- * □ 6. basic error checking;
- * □ 7. include favorite, retweet, endpoints;
- * □ 8. implement cURL calls rather than calling
+ * □ 6. create a command line interface;
+ * □ 7. basic error checking;
+ *          □ a. check if files exist;
+ *          □ b. if cURL fails, wait, try again;
+ * □ 8. include favorite, retweet, endpoints;
+ * □ 9. implement cURL calls rather than calling
  *      oauth deprecated functions.
 */
 
@@ -17,13 +20,13 @@
 #include <oauth.h>
 #include "helpers.h"
 
-int putenv(char *string);
-
 #ifdef DEBUG
     #define DEBUG_PRINT
 #else
     #define DEBUG_PRINT for(;0;)
 #endif
+
+int putenv(char *string);
 
 /* Attribution:
  * https://github.com/sigabrt/slurp/blob/8de8fc24d82279e755ce2179dceee5f4ca6df8c0/slurp.c#L277
@@ -64,7 +67,7 @@ void read_auth_keys(const char *filename, int bufsize,
 int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
     const char *twitter_api_endpoint =  "https://api.twitter.com/1.1/"
                                         "statuses/home_timeline.json"
-                                        "?count=10&include_entities=false"
+                                        "?count=30&include_entities=false"
                                         "&exclude_replies=true"
                                         "&trim_user=true"
                                         "&contributor_details=false";
@@ -116,7 +119,7 @@ int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
     }
 
     DEBUG_PRINT printf("query:'%s'\n",req_url);
-    DEBUG_PRINT printf("query:'%s'\n",reply);
+    DEBUG_PRINT printf("reply:'%s'\n",reply);
 
     json_object *json_data_obj;
     json_data_obj = json_tokener_parse(reply);
@@ -169,7 +172,7 @@ int main (int argc, char **argv) {
     /* TODO: Fix this: */
     /* curl_easy_setopt(curl, CURLOPT_CAPATH, capath); */
     putenv("CURLOPT_SSL_VERIFYPEER=0"); 
-    oauth_get_tweets(0, "keys.txt", "tweets.txt");
+    oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt");
     //oauth_get_tweets(0, "keys.txt", NULL); //prints to stdout
     return(0);
 }
