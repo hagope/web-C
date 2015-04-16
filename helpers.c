@@ -1,10 +1,12 @@
 #include "helpers.h"
 #include <stdio.h>
 
-char *replace_http = "http:\\/\\/t.co\\/";
-char *replace_https = "https:\\/\\/t.co\\/";
+#ifdef DEBUG
+    #define DEBUG_PRINT
+#else
+    #define DEBUG_PRINT for(;0;)
+#endif
 
-char *replace_with = ">";
 void init_string(struct string *s) {
     s->len = 0;
     s->ptr = malloc(s->len+1);
@@ -30,17 +32,16 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
     return size*nmemb;
 }
 
-
 /* http://stackoverflow.com/questions/779875/what-is-the-function-to-replace-string-in-c */
 // You must free the result if result is non-NULL.
 char *str_replace(char *orig, char *rep, char *with) {
-    char *result; // the return string
-    char *ins;    // the next insert point
-    char *tmp;    // varies
-    int len_rep;  // length of rep
-    int len_with; // length of with
-    int len_front; // distance between rep and end of last rep
-    int count;    // number of replacements
+    char *result;   // the return string
+    char *ins;      // the next insert point
+    char *tmp;      // varies
+    int len_rep;    // length of rep
+    int len_with;   // length of with
+    int len_front;  // distance between rep and end of last rep
+    int count;      // number of replacements
 
     if (!orig)
         return NULL;
@@ -82,6 +83,10 @@ char *str_replace(char *orig, char *rep, char *with) {
  */
 char *sanitize_tweet(char *src)
 {
+    /* TODO: use an array to clean up */
+    char *replace_http = "http:\\/\\/t.co\\/";
+    char *replace_https = "https:\\/\\/t.co\\/";
+    char *replace_with = ">";
     src++; src[strlen(src)-1]=0;
     char *dst0 = malloc(sizeof(char) * strlen(src) + 1);
     strcpy(dst0, str_replace(src, replace_http, replace_with));
@@ -97,18 +102,17 @@ char *sanitize_tweet(char *src)
     return dst3;
 }
 
-
-
 /* This function will traverse the JSON
  * and return the first value that
  * matches the Key value,
  * otherwise returns NULL
+ * For proper error handling of JSON object:
+ * https://json-c.github.io/json-c/json-c-0.12/doc/html/json__tokener_8h.html#a0d9a666c21879647e8831f9cfa691673
 */
 const char *json_get_first_value_from_key(char *json_str, char *in_key) {
     json_tokener *tok;
     json_object *json_data_obj;
     tok = json_tokener_new();
-    //json_data_obj = json_tokener_parse(json_str);
     int stringlen = 0;
     enum json_tokener_error jerr;
 
@@ -119,17 +123,17 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
     if (jerr != json_tokener_success)
     {
         fprintf(stderr, "Error: %s\n", json_tokener_error_desc(jerr));
-        // Handle errors, as appropriate for your application.
+        /* Handle errors, as appropriate for your application. */
     }
     if (tok->char_offset < stringlen) // XXX shouldn't access internal fields
     {
-        // Handle extra characters after parsed object as desired.
-        // e.g. issue an error, parse another object from that point, etc...
+        /* Handle extra characters after parsed object as desired. */
+        /* e.g. issue an error, parse another object from that point, etc... */
     }
 
-    // printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
-    int objLen=0;
+    DEBUG_PRINT printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(json_data_obj));
 
+    int objLen=0;
     const char *ret;
     do {
         /* Traverse the JSON */
@@ -138,11 +142,11 @@ const char *json_get_first_value_from_key(char *json_str, char *in_key) {
                 ret = json_object_to_json_string_ext(val,JSON_C_TO_STRING_PRETTY );
                 return ret;
            }
-            //printf("%s\t : %s\n", key, json_object_to_json_string(val));
+            DEBUG_PRINT printf("%s\t : %s\n", key, json_object_to_json_string(val));
         } 
         json_data_obj = val;
         objLen =  json_object_object_length(val);
-        //printf("object length: %d\n", objLen);
+        DEBUG_PRINT printf("object length: %d\n", objLen);
     } while(objLen > 0 && objLen < 32512); /* objLen is 32512 at the last node */
 
     json_object_put(json_data_obj);

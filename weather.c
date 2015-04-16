@@ -54,18 +54,14 @@ int main(int argc, char *argv[]) {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         //curl_easy_setopt(curl, CURLOPT_CAPATH , getenv("SSL_CERT_DIR"));
 
-        /* puts("*** curl_easy_perform(curl) ***"); */
+        DEBUG_PRINT puts("*** curl_easy_perform(curl) ***");
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
                     curl_easy_strerror(res));
         } else {
-            /* For proper error handling of JSON object:
-             * https://json-c.github.io/json-c/json-c-0.12/doc/html/json__tokener_8h.html#a0d9a666c21879647e8831f9cfa691673
-             */
-
-            //printf("%s\n",s.ptr);
+            DEBUG_PRINT printf("%s\n",s.ptr);
             
             printf("temp:%s\n", json_get_first_value_from_key(s.ptr, "temp"));                
             printf("code:%s\n", json_get_first_value_from_key(s.ptr, "code"));
