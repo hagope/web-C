@@ -63,6 +63,47 @@ void read_auth_keys(const char *filename, int bufsize,
     fclose(file);
 }
 
+void process_reply(char *reply, char *out_file) {
+
+    json_object *json_data_obj;
+    json_data_obj = json_tokener_parse(reply);
+
+    /* reply from Twitter API a JSON array 
+     * TODO: validate the reply before parsing
+     */
+
+    int json_array_len = json_object_array_length(json_data_obj);
+    int array_iter;
+
+    FILE *f;
+    if(out_file != NULL)
+        f = fopen(out_file,"w");
+    
+    for(array_iter=0; array_iter<json_array_len; array_iter++)
+    {
+        json_object *temp_json_obj;
+        temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
+        DEBUG_PRINT printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
+        char *src;
+        src = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "text");
+        if(out_file != NULL) {
+            fprintf(f,"%s\n", sanitize_tweet(src));
+        } else {
+            printf("%s\n", sanitize_tweet(src));
+        }
+        json_object_put(temp_json_obj);
+    }
+
+    json_object_put(json_data_obj);
+
+    if(reply) free(reply);
+
+    if(out_file != NULL)
+        if(fclose(f)==0) 
+            printf("tweets stored in %s\n", out_file);
+
+}
+
 /* If out_file is NULL, will print to stdout */
 int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
     const char *twitter_api_endpoint =  "https://api.twitter.com/1.1/"
@@ -120,45 +161,13 @@ int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
 
     DEBUG_PRINT printf("query:'%s'\n",req_url);
     DEBUG_PRINT printf("reply:'%s'\n",reply);
-
-    json_object *json_data_obj;
-    json_data_obj = json_tokener_parse(reply);
-
-    /* reply from Twitter API a JSON array 
-     * TODO: validate the reply before parsing
-     */
-
-    int json_array_len = json_object_array_length(json_data_obj);
-    int array_iter;
-
-    FILE *f;
-    if(out_file != NULL)
-        f = fopen(out_file,"w");
-    
-    for(array_iter=0; array_iter<json_array_len; array_iter++)
-    {
-        json_object *temp_json_obj;
-        temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
-        DEBUG_PRINT printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
-        char *src;
-        src = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "text");
-        if(out_file != NULL) {
-            fprintf(f,"%s\n", sanitize_tweet(src));
-        } else {
-            printf("%s\n", sanitize_tweet(src));
-        }
-        json_object_put(temp_json_obj);
+    if(reply != NULL) {
+        process_reply(reply, out_file);
+    } else {
+        puts("cant get tweets, trying again...");
+        sleep(10);
+        oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt"); //try again
     }
-
-    json_object_put(json_data_obj);
-
-    if(req_url) free(req_url);
-    if(postarg) free(postarg);
-    if(reply) free(reply);
-
-    if(out_file != NULL)
-        if(fclose(f)==0) 
-            printf("tweets stored in %s\n", out_file);
 
     return(0);
 }
