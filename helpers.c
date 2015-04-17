@@ -83,23 +83,15 @@ char *str_replace(char *orig, char *rep, char *with) {
  */
 char *sanitize_tweet(char *src)
 {
-    /* TODO: use an array to clean up */
-    char *replace_http = "http:\\/\\/t.co\\/";
-    char *replace_https = "https:\\/\\/t.co\\/";
-    char *replace_with = ">";
     src++; src[strlen(src)-1]=0;
-    char *dst0 = malloc(sizeof(char) * strlen(src) + 1);
-    strcpy(dst0, str_replace(src, replace_http, replace_with));
-    char *dst1 = malloc(sizeof(char) * strlen(dst0) + 1);
-    strcpy(dst1, str_replace(dst0,"\\n" , " "));
-    char *dst2 = malloc(sizeof(char) * strlen(dst1) + 1);
-    strcpy(dst2, str_replace(dst1, replace_https, replace_with));
-    char *dst3 = malloc(sizeof(char) * strlen(dst2) + 1);
-    decode_html_entities_utf8(dst3, dst2);
-    free(dst0);
-    free(dst1);
-    free(dst2);
-    return dst3;
+    char *srccpy = malloc(sizeof(char) * strlen(src) + 1);
+    char *dst = malloc(sizeof(char) * strlen(src) + 1);
+    strcpy(srccpy, src);
+    decode_html_entities_utf8(dst, srccpy);
+
+    free(srccpy);
+    
+    return dst;
 }
 
 /* This function will traverse the JSON
