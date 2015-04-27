@@ -85,11 +85,13 @@ void process_reply(char *reply, char *out_file) {
         temp_json_obj = json_object_array_get_idx(json_data_obj,array_iter);
         DEBUG_PRINT printf("json_data_obj.to_string()=%s\n", json_object_to_json_string(temp_json_obj));
         char *src;
+        char *id;
         src = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "text");
+        id = json_get_first_value_from_key(json_object_to_json_string(temp_json_obj), "id");
         if(out_file != NULL) {
-            fprintf(f,"%s\n", sanitize_tweet(src));
+            fprintf(f,"%s\t%s\n", sanitize_tweet(src), id );
         } else {
-            printf("%s\n", sanitize_tweet(src));
+            printf("%s\t%s\n", sanitize_tweet(src), id );
         }
         json_object_put(temp_json_obj);
     }
@@ -183,5 +185,5 @@ int main (int argc, char **argv) {
     putenv("CURLOPT_SSL_VERIFYPEER=0"); 
     oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt");
     //oauth_get_tweets(0, "keys.txt", NULL); //prints to stdout
-    return(0);
+    return EXIT_SUCCESS;
 }
