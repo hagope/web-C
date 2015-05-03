@@ -14,11 +14,17 @@
 #include <curl/curl.h>
 #include "helpers.h"
 
+#ifdef DEBUG
+    #define DEBUG_PRINT
+#else
+    #define DEBUG_PRINT for(;0;)
+#endif
+
 /* Yahoo Weather API: https://developer.yahoo.com/weather/ */
 /* TODO: De-hard-code the location */
 /* this string can be modified for your location:
  * const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/"
- *                                   "yql?q=select%20item.condition%20from%20"
+ *                                   "yql?q=select%20*%20from%20"
  *                                   "weather.forecast%20where%20woeid%20in%20"
  *                                   "(select%20woeid%20from%20geo.places(1)%20"
  *                                   "where%20text%3D%22sunnyvale%2C%20ca%22)&format="
@@ -31,7 +37,14 @@ const static char *api_endpoint =   "https://query.yahooapis.com/v1/public/yql?q
                                     "202502265&format=json&env=store%3A%2F%2F"
                                     "datatables.org%2Falltableswithkeys";
                                     
+/* const static char *api_endpoint_fore =   "https://query.yahooapis.com/v1/public/yql?q=" */
+                                    /* "select%20item.forecast%20from%20" */
+                                    /* "weather.forecast%20where%20woeid%20%3D%" */
+                                    /* "202502265&format=json&env=store%3A%2F%2F" */
+                                    /* "datatables.org%2Falltableswithkeys"; */
+                                    
 int main(int argc, char *argv[]) {
+    FILE *file = fopen("temp.txt", "w");
     CURL *curl;
     CURLcode res;
 
@@ -62,15 +75,45 @@ int main(int argc, char *argv[]) {
                     curl_easy_strerror(res));
         } else {
             DEBUG_PRINT printf("%s\n",s.ptr);
+
+            char *temp = json_get_first_value_from_key(s.ptr, "temp");
+            char *code = json_get_first_value_from_key(s.ptr, "code");
+            char *text = json_get_first_value_from_key(s.ptr, "text");
+            /* char *high = json_get_first_value_from_key(s.ptr, "high"); */
+            /* char *low  = json_get_first_value_from_key(s.ptr, "low"); */
+
+            /* temp++; */
+            /* temp[strlen(temp)-1] = '\0'; */
+            /* code++; */
+            /* code[strlen(code)-1] = '\0'; */
+            /* high++; */
+            /* high[strlen(high)-1] = '\0'; */
+            /* low++; */
+            /* low[strlen(low)-1] = '\0'; */
+            /* text++; */
+            /* text[strlen(text)-1] = '\0'; */
+            /*  */
+            DEBUG_PRINT printf("temp:%s\n", temp);                
+            fprintf(file,"%s\n", temp);
             
-            printf("temp:%s\n", json_get_first_value_from_key(s.ptr, "temp"));                
-            printf("code:%s\n", json_get_first_value_from_key(s.ptr, "code"));
-            printf("text:%s\n", json_get_first_value_from_key(s.ptr, "text"));
+            DEBUG_PRINT printf("code:%s\n", code);
+            fprintf(file,"%s\n", code); 
+
+            DEBUG_PRINT printf("text:%s\n", text);
+            fprintf(file,"%s\n", text);
+
+            /* DEBUG_PRINT printf("high:%s\n", high);  */
+            /* fprintf(file,"%s\n", high); */
+
+            /* DEBUG_PRINT printf("low:%s\n", low); */
+            /* fprintf(file,"%s\n", low); */
+
 
             free(s.ptr);
-    }
+        }
         curl_easy_cleanup(curl); 
     }
+    fclose(file);
     
     return 0;
 }

@@ -167,8 +167,7 @@ int oauth_get_tweets(int use_post, char *key_file, char *out_file) {
         process_reply(reply, out_file);
     } else {
         puts("cant get tweets, trying again...");
-        sleep(10);
-        oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt"); //try again
+        return(1);
     }
 
     return(0);
@@ -183,7 +182,11 @@ int main (int argc, char **argv) {
     /* TODO: Fix this: */
     /* curl_easy_setopt(curl, CURLOPT_CAPATH, capath); */
     putenv("CURLOPT_SSL_VERIFYPEER=0"); 
-    oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt");
-    //oauth_get_tweets(0, "keys.txt", NULL); //prints to stdout
+    /* try 3 times */
+    if(oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt"))
+        if(oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt"))
+            if(oauth_get_tweets(0, "keys.txt", "/tmp/tweets.txt"))
+                return EXIT_FAILURE; 
+
     return EXIT_SUCCESS;
 }
